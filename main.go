@@ -2,9 +2,13 @@ package main
 
 import (
 	"bioskop/controllers"
-	"bioskop/db"
+	database "bioskop/db"
+	"database/sql"
+	"fmt"
+	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -15,8 +19,37 @@ import (
 // 	Rating float64 `json:"rating"`
 // }
 
+var (
+	DB  *sql.DB
+	err error
+)
+
 func main() {
-	db.Connect()
+	err = godotenv.Load("config/.env")
+	if err != nil {
+		panic("Error loading .env file")
+	}
+
+	// psqlInfo := fmt.Sprintf(`host=%s port=%d user=%s password=%s dbname=%s sslmode=disable`,
+	// 	host, port, user, password, dbname,
+	// )
+
+	psqlInfo := fmt.Sprintf(`host=%s port=%s user=%s password=%s dbname=%s sslmode=disable`,
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
+
+	DB, err = sql.Open("postgres", psqlInfo)
+	defer DB.Close()
+	err = DB.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+	database.DBMigrate(DB)
 
 	router := gin.Default()
 	router.GET("/bioskop", controllers.GetAllBioskop)

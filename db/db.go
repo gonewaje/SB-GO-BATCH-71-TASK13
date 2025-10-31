@@ -2,38 +2,29 @@ package db
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
-	"log"
-	"os"
 
-	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
+	migrate "github.com/rubenv/sql-migrate"
 )
+
+//go:embed sql_migrations/*.sql
+var dbMigrations embed.FS
 
 var DB *sql.DB
 
-func Connect() {
-	_ = godotenv.Load("config/.env")
-
-	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-	)
-
-	var err error
-	DB, err = sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal("Could not connect to database:", err)
+func DBMigrate(dbParam *sql.DB) {
+	migrations := &migrate.EmbedFileSystemMigrationSource{
+		FileSystem: dbMigrations,
+		Root:       "sql_migrations",
 	}
 
-	err = DB.Ping()
-	if err != nil {
-		log.Fatal("Cannot ping database:", err)
+	n, errs := migrate.Exec(dbParam, "postgres", migrations, migrate.Up)
+	if errs != nil {
+		panic(errs)
 	}
 
-	fmt.Println("Database connected successfully")
+	DB = dbParam
+
+	fmt.Println("Migration success, applied", n, "migrations!")
 }
