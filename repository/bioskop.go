@@ -3,6 +3,7 @@ package repository
 import (
 	"bioskop/structs"
 	"database/sql"
+	"fmt"
 )
 
 func GetAllBioskop(db *sql.DB) (result []structs.Bioskop, err error) {
@@ -28,25 +29,46 @@ func GetAllBioskop(db *sql.DB) (result []structs.Bioskop, err error) {
 	return
 }
 
-func InsertBioskop(db *sql.DB, bioskop structs.Bioskop) (err error) {
-	sql := "INSERT INTO bioskop(id, nama, lokasi, rating) VALUES ($1, $2,$3,$4)"
-
-	errs := db.QueryRow(sql, bioskop.ID, bioskop.Nama, bioskop.Lokasi, bioskop.Rating)
-
-	return errs.Err()
+func InsertBioskop(db *sql.DB, bioskop structs.Bioskop) error {
+	query := "INSERT INTO bioskop (nama, lokasi, rating) VALUES ($1, $2, $3)"
+	_, err := db.Exec(query, bioskop.Nama, bioskop.Lokasi, bioskop.Rating)
+	return err
 }
 
-func UpdateBioskop(db *sql.DB, bioskop structs.Bioskop) (err error) {
-	sql := "UPDATE bioskop SET nama = $1, lokasi = $2, rating = $3 WHERE id = $4"
+func UpdateBioskop(db *sql.DB, bioskop structs.Bioskop) error {
+	query := "UPDATE bioskop SET nama = $1, lokasi = $2, rating = $3 WHERE id = $4"
+	result, err := db.Exec(query, bioskop.Nama, bioskop.Lokasi, bioskop.Rating, bioskop.ID)
+	if err != nil {
+		return err
+	}
 
-	errs := db.QueryRow(sql, bioskop.Nama, bioskop.Lokasi, bioskop.Rating, bioskop.ID)
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
 
-	return errs.Err()
+	if rowsAffected == 0 {
+		return fmt.Errorf("no bioskop found with id %d", bioskop.ID)
+	}
+
+	return nil
 }
 
-func DeleteBioskop(db *sql.DB, bioskop structs.Bioskop) (err error) {
-	sql := "DELETE FROM bioskop WHERE id = $1"
+func DeleteBioskop(db *sql.DB, bioskop structs.Bioskop) error {
+	query := "DELETE FROM bioskop WHERE id = $1"
+	result, err := db.Exec(query, bioskop.ID)
+	if err != nil {
+		return err
+	}
 
-	errs := db.QueryRow(sql, bioskop.ID)
-	return errs.Err()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no bioskop found with id %d", bioskop.ID)
+	}
+
+	return nil
 }
